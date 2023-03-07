@@ -44,14 +44,15 @@ class SafetyController:
         """
         # Get lidar data of collision zone
         collision_zone_data = self.make_collision_zone_data(lidar_data)
+        collision_zone_distances = collision_zone_data.ranges
     
         # Visualize collision zone points
         wall_projection = self.laser_projector.projectLaser(collision_zone_data)
         self.laser_projection_publisher.publish(wall_projection)
 
         # Get Collision Zone Data
-        min = np.min(collision_zone_data)
-        average = np.average(collision_zone_data)
+        min = np.min(collision_zone_distances)
+        average = np.average(collision_zone_distances)
 
         rospy.loginfo("Average: " + average + " Min: " + min)
         
