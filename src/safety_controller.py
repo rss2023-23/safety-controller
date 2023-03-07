@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import numpy as np
 import sensor_msgs.point_cloud2 as pc2
@@ -14,7 +14,7 @@ from visualization_tools import *
 class SafetyController:
     # ROS Parameters
     SCAN_TOPIC = rospy.get_param("wall_follower/scan_topic", "/scan")
-    DRIVE_TOPIC = rospy.get_param("wall_follower/drive_topic", "/vesc/ackermann_cmd_mux/input/navigation")
+    DRIVE_TOPIC = rospy.get_param("wall_follower/drive_topic")
 
     LEFT_SCAN_STARTING_INDEX = 45
     LEFT_SCAN_ENDING_INDEX = 100
@@ -52,69 +52,26 @@ class SafetyController:
         Angle Increment: 0.047575756
         """
         # Get lidar data of followed wall
-        wall_data = self.make_wall_data(lidar_data)
+        # wall_data = self.make_wall_data(lidar_data) # now we want smallest value (20cm)
+        smallest_value = np.min(self.wall_data(lidar_data))
 
-        # Convert wall distances to coordinate points
-        wall_projection = self.laser_projector.projectLaser(wall_data)
-        self.laser_projection_publisher.publish(wall_projection)
-        wall_points = pc2.read_points_list(wall_projection)
+        if smallest_value <= 0.2:
+            self.adjust_drive()
 
-        # Estimate wall line from coordinate points
-        slope, intercept = self.get_wall_line(lidar_data, wall_points)
-
-        # Visualize wall line
-        x = [-2, 2]
-        y = [x[0]*slope + intercept, x[1]*slope + intercept]
-        VisualizationTools.plot_line(
-            x, y, self.wall_line_publisher, frame="/laser")
-
-        # Estimate Distance from Wall
-        distance = abs(intercept) / math.sqrt(1 + slope**2)
-        print("Distance: ", distance)
-
-        # Follow Wall
-        # Positive error means steer away
+    def wall_data(self, lidar_data):
+        """
+        Gets smallest value from data
 
         """
-        error = -self.SIDE * (self.DESIRED_DISTANCE - distance)
-        control = self.KP*error + self.KD * \
-            self.VELOCITY*math.sin(self.last_control) # Substitute with slope cos(arctan(slope))
-        self.last_control = control
-        self.drive(control, self.VELOCITY)
+        wall_data = lidar_data[20:81]
         """
+        This represents the "forward facing" ranges, so it won't stop when something comes up from behind
 
-    def make_wall_data(self, lidar_data):
-        """
-        Mutates lidar_data to only contain the lidar data facing the followed wall
+        """ 
 
-        Left Wall: > 20 degrees; > 0.349066 radians; Index : 57-100
-        Right Wall: < -20 degrees; < -0.349066 radians; Index 0:43
-        """
-        wall_to_follow = self.side_to_direction[self.SIDE]
+        return wall_data
 
-        if wall_to_follow == "left":
-            lidar_data.ranges = lidar_data.ranges[self.LEFT_SCAN_STARTING_INDEX:self.LEFT_SCAN_ENDING_INDEX]
-            lidar_data.angle_min = lidar_data.angle_min + \
-                lidar_data.angle_increment * \
-                float(self.LEFT_SCAN_STARTING_INDEX)
-        else:
-            lidar_data.ranges = lidar_data.ranges[self.RIGHT_SCAN_STARTING_INDEX:self.RIGHT_SCAN_ENDING_INDEX]
-            lidar_data.angle_max = lidar_data.angle_min + \
-                lidar_data.angle_increment * \
-                float(self.RIGHT_SCAN_ENDING_INDEX-1)
-
-        return lidar_data
-
-    def get_wall_line(self, lidar_data, wall_points):
-        ranges = lidar_data.ranges
-
-        x_coords = [wall_points[i].x for i in range(
-            len(wall_points)) if ranges[i] <= self.MAX_WALL_DISTANCE]
-        y_coords = [wall_points[j].y for j in range(
-            len(wall_points)) if ranges[j] <= self.MAX_WALL_DISTANCE]
-        return np.polyfit(x_coords, y_coords, 1)
-
-    def drive(self, steering_angle, speed, steering_angle_velocity=0, acceleration=0, jerk=0):
+    def adjust_drive(self):
         car_action_stamped = AckermannDriveStamped()
 
         # Make header
@@ -123,11 +80,11 @@ class SafetyController:
 
         # Make command
         car_action = car_action_stamped.drive
-        car_action.steering_angle = steering_angle
-        car_action.steering_angle_velocity = steering_angle_velocity
-        car_action.speed = speed
-        car_action.acceleration = acceleration
-        car_action.jerk = jerk
+        car_action.steering_angle = 0
+        car_action.steering_angle_velocity = 0
+        car_action.speed = -0.5
+        car_action.acceleration = 0
+        car_action.jerk = 0
 
         # Publish command
         self.car_publisher.publish(car_action_stamped)
