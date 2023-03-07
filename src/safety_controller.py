@@ -55,8 +55,8 @@ class SafetyController:
 
         rospy.loginfo("Average: " + str(average) + " Min: " + str(min))
         
-        #self.drive_car()
-        if average <= self.DANGER_THRESHOLD:
+        self.drive_car()
+        if min <= self.DANGER_THRESHOLD:
             self.stop_car()
 
     def make_collision_zone_data(self, lidar_data):
