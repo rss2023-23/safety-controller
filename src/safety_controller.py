@@ -17,8 +17,8 @@ class SafetyController:
     DRIVE_TOPIC = rospy.get_param("safety_controller/drive_topic", "/vesc/low_level/ackermann_cmd_mux/input/safety")
 
     # Tunable Parameters
-    SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 50)
-    SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 50)
+    SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 40)
+    SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 61)
     DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.2)
     TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 0.5)
 
@@ -54,7 +54,7 @@ class SafetyController:
         min = np.min(collision_zone_distances)
         average = np.average(collision_zone_distances)
 
-        rospy.loginfo("Average: " + average + " Min: " + min)
+        rospy.loginfo("Average: " + str(average) + " Min: " + str(min))
         
         #self.drive_car()
         if average <= self.DANGER_THRESHOLD:
@@ -67,8 +67,9 @@ class SafetyController:
         Collision Zone: #TODO HERE
         """
         lidar_data.ranges = lidar_data.ranges[self.SCAN_STARTING_INDEX:self.SCAN_ENDING_INDEX]
-        lidar_data.angle_min = lidar_data.angle_min + lidar_data.angle_increment * float(self.SCAN_STARTING_INDEX)
-        lidar_data.angle_max = lidar_data.angle_min + lidar_data.angle_increment * float(self.SCAN_ENDING_INDEX-1)
+        old_min_angle = lidar_data.angle_min
+        lidar_data.angle_min = old_min_angle + lidar_data.angle_increment * float(self.SCAN_STARTING_INDEX)
+        lidar_data.angle_max = old_min_angle + lidar_data.angle_increment * float(self.SCAN_ENDING_INDEX-1)
 
         return lidar_data
 
