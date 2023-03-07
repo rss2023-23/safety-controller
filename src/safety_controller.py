@@ -13,18 +13,13 @@ from visualization_tools import *
 
 class SafetyController:
     # ROS Parameters
-    SCAN_TOPIC = rospy.get_param("wall_follower/scan_topic", "/scan")
-    DRIVE_TOPIC = rospy.get_param("wall_follower/drive_topic")
+    SCAN_TOPIC = rospy.get_param("safety_controller/scan_topic", "/scan")
+    DRIVE_TOPIC = rospy.get_param("safety_controller/drive_topic", "/vesc/low_level/ackermann_cmd_mux/input/safety")
 
-    LEFT_SCAN_STARTING_INDEX = 45
-    LEFT_SCAN_ENDING_INDEX = 100
-    RIGHT_SCAN_STARTING_INDEX = 0
-    RIGHT_SCAN_ENDING_INDEX = 55
-    MAX_WALL_DISTANCE = 3
-    VELOCITY = rospy.get_param("wall_follower/velocity", 1)
-    DESIRED_DISTANCE = rospy.get_param("wall_follower/desired_distance", 1)
-
-
+    # Tunable Parameters
+    SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 50)
+    SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 50)
+    DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.2)
 
     def __init__(self):
         # Subscribe to LIDAR Sensor
@@ -39,11 +34,6 @@ class SafetyController:
         self.laser_projection_publisher = rospy.Publisher(
             "laser_projection", PointCloud2, queue_size=1)
 
-        self.wall_line_publisher = rospy.Publisher(
-            "wall_line", Marker, queue_size=1)
-
-        self.last_control = 0
-
     def on_lidar_scan(self, lidar_data):
         """
         lidar_data:
@@ -51,27 +41,36 @@ class SafetyController:
         Min Angle: -2.355
         Angle Increment: 0.047575756
         """
-        # Get lidar data of followed wall
-        # wall_data = self.make_wall_data(lidar_data) # now we want smallest value (20cm)
-        smallest_value = np.min(self.wall_data(lidar_data))
+        # Get lidar data of collision zone
+        collision_zone_data = self.make_collision_zone_data(lidar_data)
+    
+        # Visualize collision zone points
+        wall_projection = self.laser_projector.projectLaser(collision_zone_data)
+        self.laser_projection_publisher.publish(wall_projection)
 
-        if smallest_value <= 0.2:
-            self.adjust_drive()
+        # Get Collision Zone Data
+        min = np.min(collision_zone_data)
+        average = np.average(collision_zone_data)
 
-    def wall_data(self, lidar_data):
+        rospy.loginfo("Average: " + average + " Min: " + min)
+        
+
+        if average <= self.DANGER_THRESHOLD:
+            self.stop_car()
+
+    def make_collision_zone_data(self, lidar_data):
         """
-        Gets smallest value from data
+        Mutates lidar_data to only contain the lidar data in the collision zone of the car
 
+        Collision Zone: #TODO HERE
         """
-        wall_data = lidar_data[20:81]
-        """
-        This represents the "forward facing" ranges, so it won't stop when something comes up from behind
+        lidar_data.ranges = lidar_data.ranges[self.SCAN_STARTING_INDEX:self.SCAN_ENDING_INDEX]
+        lidar_data.angle_min = lidar_data.angle_min + lidar_data.angle_increment * float(self.SCAN_STARTING_INDEX)
+        lidar_data.angle_max = lidar_data.angle_min + lidar_data.angle_increment * float(self.SCAN_ENDING_INDEX-1)
 
-        """ 
+        return lidar_data
 
-        return wall_data
-
-    def adjust_drive(self):
+    def stop_car(self):
         car_action_stamped = AckermannDriveStamped()
 
         # Make header
@@ -82,13 +81,12 @@ class SafetyController:
         car_action = car_action_stamped.drive
         car_action.steering_angle = 0
         car_action.steering_angle_velocity = 0
-        car_action.speed = -0.5
+        car_action.speed = -0.1
         car_action.acceleration = 0
         car_action.jerk = 0
 
         # Publish command
         self.car_publisher.publish(car_action_stamped)
-
 
 
 if __name__ == "__main__":
