@@ -20,6 +20,7 @@ class SafetyController:
     SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 50)
     SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 50)
     DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.2)
+    TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 0.5)
 
     def __init__(self):
         # Subscribe to LIDAR Sensor
@@ -54,7 +55,7 @@ class SafetyController:
 
         rospy.loginfo("Average: " + average + " Min: " + min)
         
-
+        #self.drive_car()
         if average <= self.DANGER_THRESHOLD:
             self.stop_car()
 
@@ -82,6 +83,24 @@ class SafetyController:
         car_action.steering_angle = 0
         car_action.steering_angle_velocity = 0
         car_action.speed = -0.1
+        car_action.acceleration = 0
+        car_action.jerk = 0
+
+        # Publish command
+        self.car_publisher.publish(car_action_stamped)
+
+    def drive_car(self):
+        car_action_stamped = AckermannDriveStamped()
+
+        # Make header
+        car_action_stamped.header.stamp = rospy.Time.now()
+        car_action_stamped.header.frame_id = "world"
+
+        # Make command
+        car_action = car_action_stamped.drive
+        car_action.steering_angle = 0
+        car_action.steering_angle_velocity = 0
+        car_action.speed = self.TESTING_VELOCITY
         car_action.acceleration = 0
         car_action.jerk = 0
 
