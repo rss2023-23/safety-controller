@@ -17,9 +17,9 @@ class SafetyController:
     DRIVE_TOPIC = rospy.get_param("safety_controller/drive_topic", "/vesc/low_level/ackermann_cmd_mux/input/safety")
 
     # Tunable Parameters
-    SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 500)
-    SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 580)
-    DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.2)
+    SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 460)
+    SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 620)
+    DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.3)
     TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 0.5)
 
     def __init__(self):
