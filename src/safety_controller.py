@@ -20,11 +20,16 @@ class SafetyController:
     SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 460)
     SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 620)
     DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.3)
-    TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 0.5)
+    TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 1)
+
+    self.last_drive_command = None
 
     def __init__(self):
         # Subscribe to LIDAR Sensor
         rospy.Subscriber(self.SCAN_TOPIC, LaserScan, self.on_lidar_scan)
+
+        # Subscribe to Driving Command
+        rospy.Subscriber("/vesc/high_level/ackermann_cmd_mux/output", AckermannDriveStamped, self.on_drive_command)
 
         # Publish Car Actions
         self.car_publisher = rospy.Publisher(
@@ -34,6 +39,11 @@ class SafetyController:
         self.laser_projector = lg.LaserProjection()
         self.laser_projection_publisher = rospy.Publisher(
             "laser_projection", PointCloud2, queue_size=1)
+
+    def on_drive_command(self, drive_command):
+        #Update last drive command
+        self.last_drive_command = drive_command
+        print(self.last_drive_command.drive.speed)
 
     def on_lidar_scan(self, lidar_data):
         """
