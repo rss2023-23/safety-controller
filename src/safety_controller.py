@@ -22,7 +22,7 @@ class SafetyController:
     DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.3)
     TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 1)
 
-    self.last_drive_command = None
+    last_drive_command = None
 
     def __init__(self):
         # Subscribe to LIDAR Sensor
