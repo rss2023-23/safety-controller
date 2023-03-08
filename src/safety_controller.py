@@ -73,7 +73,7 @@ class SafetyController:
         
         # Check for potential collision
         self.drive_car()
-        if self.last_drive_speed > 0 and min <= 0.27 + self.DANGER_THRESHOLD*math.sqrt(2*self.last_drive_speed):
+        if self.last_drive_speed > 0 and min <= 0.27 + self.DANGER_THRESHOLD*(2*self.last_drive_speed)**(1/3):
             self.stop_car() # Collision detected!
 
     def get_collision_zone_data(self, lidar_data):
