@@ -48,7 +48,7 @@ class SafetyController:
         if drive_command != None and drive_command.drive.speed != None:
             self.last_drive_command = drive_command
             self.last_drive_speed = drive_command.drive.speed
-            print("Recorded Speed: , self.last_drive_speed")
+            print("Recorded Speed:" , self.last_drive_speed)
 
 
     def on_lidar_scan(self, lidar_data):
