@@ -20,7 +20,7 @@ class SafetyController:
     SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 460)
     SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 620)
     DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.05)
-    TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 1)
+    TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 2)
 
     last_drive_command = None
     last_drive_speed = 1
@@ -73,7 +73,7 @@ class SafetyController:
         
         # Check for potential collision
         self.drive_car()
-        if self.last_drive_speed > 0 and min <= 0.27 + self.DANGER_THRESHOLD*self.last_drive_speed:
+        if self.last_drive_speed > 0 and min <= 0.27 + self.DANGER_THRESHOLD*math.sqrt(2*self.last_drive_speed):
             self.stop_car() # Collision detected!
 
     def get_collision_zone_data(self, lidar_data):
