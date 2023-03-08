@@ -19,10 +19,11 @@ class SafetyController:
     # Tunable Parameters
     SCAN_STARTING_INDEX = rospy.get_param("safety_controller/scan_starting_index", 460)
     SCAN_ENDING_INDEX = rospy.get_param("safety_controller/scan_ending_index", 620)
-    DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.3)
+    DANGER_THRESHOLD = rospy.get_param("safety_controller/danger_threshold", 0.6)
     TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 1)
 
     last_drive_command = None
+    last_drive_speed = 1
 
     def __init__(self):
         # Subscribe to LIDAR Sensor
@@ -34,6 +35,8 @@ class SafetyController:
         # Publish Car Actions
         self.car_publisher = rospy.Publisher(
             self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
+        self.car_testing_publisher = rospy.Publisher(
+            "/vesc/ackermann_cmd_mux/input/navigation", AckermannDriveStamped, queue_size=10)
 
         # Handle Laser Geometry Projection
         self.laser_projector = lg.LaserProjection()
@@ -41,9 +44,11 @@ class SafetyController:
             "laser_projection", PointCloud2, queue_size=1)
 
     def on_drive_command(self, drive_command):
-        #Update last drive command
+        # Update driving command information
         self.last_drive_command = drive_command
-        print(self.last_drive_command.drive.speed)
+        self.last_drive_speed = self.last_drive_command.drive.speed
+        print("Recorded Speed: , self.last_drive_speed")
+
 
     def on_lidar_scan(self, lidar_data):
         """
@@ -52,7 +57,7 @@ class SafetyController:
         Angle Increment: 0.00436332309619
         """
         # Get lidar data of collision zone
-        collision_zone_data = self.make_collision_zone_data(lidar_data)
+        collision_zone_data = self.get_collision_zone_data(lidar_data)
         collision_zone_distances = collision_zone_data.ranges
     
         # Visualize collision zone points
@@ -65,15 +70,16 @@ class SafetyController:
 
         rospy.loginfo("Average: " + str(average) + " Min: " + str(min))
         
+        # Check for potential collision
         self.drive_car()
-        if min <= self.DANGER_THRESHOLD:
-            self.stop_car()
+        if self.last_drive_speed > 0 and min <= self.DANGER_THRESHOLD*self.last_drive_speed:
+            self.stop_car() # Collision detected!
 
-    def make_collision_zone_data(self, lidar_data):
+    def get_collision_zone_data(self, lidar_data):
         """
         Mutates lidar_data to only contain the lidar data in the collision zone of the car
 
-        Collision Zone: #TODO HERE
+        Collision Zone (cone of site in front of the car): SCAN_STARTING_INDEX to SCAN_ENDING_INDEX
         """
         lidar_data.ranges = lidar_data.ranges[self.SCAN_STARTING_INDEX:self.SCAN_ENDING_INDEX]
         old_min_angle = lidar_data.angle_min
@@ -116,7 +122,7 @@ class SafetyController:
         car_action.jerk = 0
 
         # Publish command
-        self.car_publisher.publish(car_action_stamped)
+        self.car_testing_publisher.publish(car_action_stamped)
 
 
 if __name__ == "__main__":
