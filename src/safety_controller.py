@@ -45,9 +45,9 @@ class SafetyController:
 
     def on_drive_command(self, drive_command):
         # Update driving command information
-        if drive_command != None and self.last_drive_command.drive.speed != None:
+        if drive_command != None and drive_command.drive.speed != None:
             self.last_drive_command = drive_command
-            self.last_drive_speed = self.last_drive_command.drive.speed
+            self.last_drive_speed = drive_command.drive.speed
             print("Recorded Speed: , self.last_drive_speed")
 
 
