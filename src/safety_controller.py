@@ -45,9 +45,10 @@ class SafetyController:
 
     def on_drive_command(self, drive_command):
         # Update driving command information
-        self.last_drive_command = drive_command
-        self.last_drive_speed = self.last_drive_command.drive.speed
-        print("Recorded Speed: , self.last_drive_speed")
+        if drive_command != None and self.last_drive_command.drive.speed != None:
+            self.last_drive_command = drive_command
+            self.last_drive_speed = self.last_drive_command.drive.speed
+            print("Recorded Speed: , self.last_drive_speed")
 
 
     def on_lidar_scan(self, lidar_data):
@@ -68,7 +69,7 @@ class SafetyController:
         min = np.min(collision_zone_distances)
         average = np.average(collision_zone_distances)
 
-        rospy.loginfo("Average: " + str(average) + " Min: " + str(min))
+        #rospy.loginfo("Average: " + str(average) + " Min: " + str(min))
         
         # Check for potential collision
         self.drive_car()
