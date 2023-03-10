@@ -76,7 +76,7 @@ class SafetyController:
         # Check for potential collision
         self.drive_car()
         if self.last_drive_speed > 0 and min <= self.INTERCEPT + self.MULTIPLIER*(self.EXPONENT)**(self.last_drive_speed):
-            rospy.login("[WARNING]: Hault Command Issued by Safety Controller")
+            rospy.loginfo("[WARNING]: Hault Command Issued by Safety Controller")
             self.stop_car() # Collision detected!
 
     def get_collision_zone_data(self, lidar_data):
