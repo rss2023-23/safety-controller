@@ -3,6 +3,7 @@
 import numpy as np
 import sensor_msgs.point_cloud2 as pc2
 import rospy
+from std_msgs.msg import Float32
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import LaserScan, PointCloud2
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -27,6 +28,7 @@ class SafetyController:
     TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 2)
     IS_TESTING = rospy.get_param("safety_controller/is_testing", False)
 
+
     last_drive_command = None
     last_drive_speed = 1
 
@@ -42,6 +44,10 @@ class SafetyController:
             self.DRIVE_TOPIC, AckermannDriveStamped, queue_size=10)
         self.car_testing_publisher = rospy.Publisher(
             "/vesc/ackermann_cmd_mux/input/navigation", AckermannDriveStamped, queue_size=10)
+
+        # Publish Rosbag Data
+        self.data_logger = rospy.Publisher(
+            "/safety_controller/data_logger", Float32, queue_size=10)
 
         # Handle Laser Geometry Projection
         self.laser_projector = lg.LaserProjection()
@@ -75,6 +81,7 @@ class SafetyController:
 
         # Test Safety Controller
         if self.IS_TESTING:
+            self.data_logger.publish(min)
             self.drive_car()
 
         # Check for potential collision
