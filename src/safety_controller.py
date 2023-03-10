@@ -23,7 +23,9 @@ class SafetyController:
     MULTIPLIER = rospy.get_param("safety_controller/danger_threshold", 0.2335)
     EXPONENT = rospy.get_param("safety_controller/danger_threshold", 1.787)
 
+    # Testing Parameters
     TESTING_VELOCITY = rospy.get_param("safety_controller/velocity", 2)
+    IS_TESTING = rospy.get_param("safety_controller/is_testing", False)
 
     last_drive_command = None
     last_drive_speed = 1
@@ -71,10 +73,11 @@ class SafetyController:
         min = np.min(collision_zone_distances)
         average = np.average(collision_zone_distances)
 
-        #rospy.loginfo("Average: " + str(average) + " Min: " + str(min))
-        
+        # Test Safety Controller
+        if self.IS_TESTING:
+            self.drive_car()
+
         # Check for potential collision
-        self.drive_car()
         if self.last_drive_speed > 0 and min <= self.INTERCEPT + self.MULTIPLIER*(self.EXPONENT)**(self.last_drive_speed):
             rospy.loginfo("[WARNING]: Hault Command Issued by Safety Controller")
             self.stop_car() # Collision detected!
